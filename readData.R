@@ -1,4 +1,5 @@
 rm(list=ls())
+set.seed(1)
 library(MatrixModels)
 library(rpart)
 library(glmnet)
@@ -27,8 +28,12 @@ combined.data <- combined.data[,colnames(combined.data)!="Date"]
 weights <- 1/combined.data$Sales^2
 weights[is.infinite(weights)] <- median(weights[!is.infinite(weights)])
 
-test <- glmTree(Sales~.,input.data = combined.data[,c("Sales",intersect(colnames(combined.data), colnames(combined.test)))],weights=weights,sparse=TRUE,nTrees=20)
+pred.sales <- rep(0,nrow(combined.test))
+for (nn in 1:1) {
+  cat("Doing iteration:",nn)
+  test <- glmTree(Sales~.,input.data = combined.data[,c("Sales",intersect(colnames(combined.data), colnames(combined.test)))],weights=weights,sparse=TRUE,log.base=1.5,seed=nn)
+  pred.sales <- pred.sales + predict(test,combined.test,s="lambda.min")[,1]
+}
+pred.sales.df <- data.frame(Id=combined.test$Id,Sales=pred.sales/nn)
 
-pred.sales <- data.frame(Id=combined.test$Id,Sales=predict(test,combined.test)[,1])
-
-write.csv(pred.sales,file="~/kaggle/rossmann/20151002.csv",row.names = FALSE)
+write.csv(pred.sales.df,file="~/kaggle/rossmann/20151002.csv",row.names = FALSE)
